@@ -331,6 +331,24 @@ class Groups(Stream):
                 self.update_bookmark(state, group.updated_at)
                 yield (self.stream, group)
 
+class Brands(Stream):
+    name = "brands"
+    replication_method = "INCREMENTAL"
+    replication_key = "updated_at"
+
+    def sync(self, state):
+        bookmark = self.get_bookmark(state)
+
+        brands = self.client.brands()
+        for brand in brands:
+            if utils.strptime_with_tz(brand.updated_at) >= bookmark:
+                # NB: We don't trust that the records come back ordered by
+                # updated_at (we've observed out-of-order records),
+                # so we can't save state until we've seen all records
+                self.update_bookmark(state, brand.updated_at)
+                yield (self.stream, brand)
+
+
 class Macros(Stream):
     name = "macros"
     replication_method = "INCREMENTAL"
@@ -431,6 +449,7 @@ class SLAPolicies(Stream):
 STREAMS = {
     "tickets": Tickets,
     "groups": Groups,
+    "brands": Brands,
     "users": Users,
     "organizations": Organizations,
     "ticket_audits": TicketAudits,
